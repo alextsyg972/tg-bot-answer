@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.File;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -37,21 +38,14 @@ public class ChatService {
         return answer;
     }
 
-    void check(Update update) {
-        List<PhotoSize> photoSizeList = update.getMessage().getPhoto();
-        int count = 1;
-        for (PhotoSize photoSize : photoSizeList) {
-            GetFile getFile = new GetFile(photoSizeList.get(photoSizeList.size() - 1).getFileId());
-            System.out.println(getFile.getFileId());
-                        try {
-                File file = answerBot.execute(getFile); //tg file obj
-                answerBot.downloadFile(file, new java.io.File("C:\\gigaPhotos" + count + ".png"));
-                count++;
-            } catch (TelegramApiException e) {
-//                log.error(e.toString());
-                e.printStackTrace();
-            }
-        }
+    String registerUser(long chatId) {
+        Chat chat = new Chat();
+        chat.setChatId(chatId);
+        chatRepository.save(chat);
+        return "Chat registered";
+//        log.info("user saved{}", user);
     }
+
+
 
 }
