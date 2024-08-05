@@ -3,6 +3,7 @@ package org.example.spring.boot.tgbotanswers.model;
 import jakarta.persistence.*;
 
 @Entity
+@Table
 public class Image {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -12,8 +13,18 @@ public class Image {
     @Column
     private String pathToImg;
 
-    @ManyToOne(fetch = FetchType.EAGER,cascade = CascadeType.ALL)
+    @ManyToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "chat_id")
     private Chat chat;
+
+
+    public Image() {
+    }
+
+    public Image(String keyToImg, String pathToImg) {
+        this.keyToImg = keyToImg;
+        this.pathToImg = pathToImg;
+    }
 
     public Chat getChat() {
         return chat;
@@ -37,10 +48,6 @@ public class Image {
 
     public void setPathToImg(String pathToImg) {
         this.pathToImg = pathToImg;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public Long getId() {

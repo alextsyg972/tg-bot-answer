@@ -2,6 +2,7 @@ package org.example.spring.boot.tgbotanswers.service;
 
 import org.example.spring.boot.tgbotanswers.model.Chat;
 import org.example.spring.boot.tgbotanswers.model.ChatRepository;
+import org.example.spring.boot.tgbotanswers.model.Image;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -45,7 +46,12 @@ public class ChatService {
         return "Chat registered";
 //        log.info("user saved{}", user);
     }
-
-
+    String addImgToChat(long chatId, String keyword, File file) {
+        Image image = new Image("da", "C:\\gigaPhotos\\photos\\" + file.getFileId() + ".png");
+        Chat chat = chatRepository.findByChatId(chatId);
+        chat.addImageToChat(image);
+        chatRepository.save(chat);
+        return "Success add";
+    }
 
 }

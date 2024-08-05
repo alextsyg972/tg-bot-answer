@@ -15,15 +15,30 @@ public class Chat {
     @Column
     private Long chatId;
 
-    @OneToMany
-    private List<Image> image;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "chat", fetch = FetchType.EAGER)
+    private List<Image> images;
 
-    public List<Image> getImage() {
-        return image;
+    public void addImageToChat(Image image) {
+        if (images == null) {
+            images = new ArrayList<>();
+        }
+        images.add(image);
+        image.setChat(this);
     }
 
-    public void setImage(List<Image> image) {
-        this.image = image;
+    public Chat() {
+    }
+
+    public Chat(Long chatId) {
+        this.chatId = chatId;
+    }
+
+    public List<Image> getImages() {
+        return images;
+    }
+
+    public void setImages(List<Image> images) {
+        this.images = images;
     }
 
     public Long getChatId() {

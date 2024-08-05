@@ -14,16 +14,13 @@ import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 //@Slf4j
 @Component
@@ -40,6 +37,7 @@ public class AnswerBot extends TelegramLongPollingBot {
         List<BotCommand> listOfCommands = new ArrayList<>();
         listOfCommands.add(new BotCommand("/start", "welcome"));
         listOfCommands.add(new BotCommand("/register", "register chat"));
+        listOfCommands.add(new BotCommand("/add", "add to"));
         listOfCommands.add(new BotCommand("/today", "Oh"));
         listOfCommands.add(new BotCommand("/set", "set"));
         try {
@@ -53,48 +51,44 @@ public class AnswerBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         long chatId = update.getMessage().getChatId();
-        if (update.hasMessage() && update.getMessage().hasText()) {
+        if (update.hasMessage() && update.getMessage().hasText() && !update.getMessage().isReply()) {
             String messageText = update.getMessage().getText();
-
+            System.out.println(messageText);
             switch (messageText) {
                 case "/start@kowern_bot" -> sendMessage(chatId, chatService.startCommandReceived(chatId));
                 case "/register@kowern_bot" -> sendMessage(chatId, chatService.registerUser(chatId));
+                case "/add@kowern_bot" ->
+                        sendMessage(chatId, "Ответь на это сообщение словом на которое бот должен реагировать");
             }
-        }
-        if (update.hasMessage() && update.getMessage().hasPhoto()) {
-            if (chatRepository.findByChatId(update.getMessage().getChatId()) == null) {
-                sendMessage(chatId, "Сначала зарегистрируйтесь");
-            } else {
-                check(update);
-            }
+        } else if (update.getMessage().isReply()) {
+            System.out.println("dasdasd");
+            addImg(update.getMessage().getChatId(), update);
+            System.out.println("dasdasd");
         }
     }
 
-    void check(Update update) {
+    void addImg(long chatId, Update update) {
+        System.out.println("dadasdad");
+        sendMessage(chatId, "Введите на какое слово будет реагировать бот");
+        String keyword = update.getMessage().getReplyToMessage().getText();
+        if (keyword != null) {
+            System.out.println(keyword);
+            check(update, keyword);
+        }
+
+    }
+
+
+    void check(Update update, String keyword) {
         Message message = update.getMessage();
         GetFile getFile = new GetFile(message.getPhoto().get(2).getFileId());
         try {
             File file = execute(getFile); //tg file obj
-            System.out.println(file.getFileId());
-            System.out.println(file.getFilePath());
-            System.out.println(file.getFileSize());
             downloadFile(file, new java.io.File("C:\\gigaPhotos\\photos\\" + file.getFileId() + ".png"));
-            Image image = new Image();
-            image.setChat(chatRepository.findByChatId(update.getMessage().getChatId()));
-            image.setKeyToImg("da");
-            image.setPathToImg("C:\\gigaPhotos\\photos\\" + file.getFileId() + ".png");
-            imageRepository.save(image);
+            sendMessage(message.getChatId(), chatService.addImgToChat(message.getChatId(), keyword, file));
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
-
-
-    }
-
-
-    @Override
-    public String getBotUsername() {
-        return botConfig.getBotName();
     }
 
 
@@ -105,9 +99,13 @@ public class AnswerBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-//            log.error("error occurred:{}", e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public String getBotUsername() {
+        return botConfig.getBotName();
     }
 
     @Autowired
