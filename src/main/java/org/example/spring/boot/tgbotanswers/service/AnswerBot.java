@@ -75,7 +75,6 @@ public class AnswerBot extends TelegramLongPollingBot {
             System.out.println(keyword);
             check(update, keyword);
         }
-
     }
 
 
