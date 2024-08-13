@@ -12,13 +12,17 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.File;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,33 +57,31 @@ public class AnswerBot extends TelegramLongPollingBot {
         long chatId = update.getMessage().getChatId();
         if (update.hasMessage() && update.getMessage().hasText() && !update.getMessage().isReply()) {
             String messageText = update.getMessage().getText();
-            System.out.println(messageText);
-            switch (messageText) {
-                case "/start@kowern_bot" -> sendMessage(chatId, chatService.startCommandReceived(chatId));
-                case "/register@kowern_bot" -> sendMessage(chatId, chatService.registerUser(chatId));
-                case "/add@kowern_bot" ->
-                        sendMessage(chatId, "Ответь на это сообщение словом на которое бот должен реагировать");
+            if (messageText.contains("@kowern_bot")) {
+                switch (messageText) {
+                    case "/start@kowern_bot" -> sendMessage(chatId, chatService.startCommandReceived(chatId));
+                    case "/register@kowern_bot" -> sendMessage(chatId, chatService.registerUser(chatId));
+                    case "/add@kowern_bot" ->
+                            sendMessage(chatId, "Ответь на это сообщение словом на которое бот должен реагировать");
+                }
             }
-        } else if (update.getMessage().isReply()) {
-            System.out.println("dasdasd");
-            addImg(update.getMessage().getChatId(), update);
-            System.out.println("dasdasd");
+            try {
+                sendingPhoto(chatId, messageText);
+            } catch (TelegramApiException e) {
+                throw new RuntimeException(e);
+            }
+        } else if (update.hasMessage() && update.getMessage().isReply()) {
+            addImg(update.getMessage().getCaption(), update);
         }
     }
 
-    void addImg(long chatId, Update update) {
-        System.out.println("dadasdad");
-        sendMessage(chatId, "Введите на какое слово будет реагировать бот");
-        String keyword = update.getMessage().getReplyToMessage().getText();
+    void addImg(String keyword, Update update) {
         if (keyword != null) {
-            System.out.println(keyword);
-            check(update, keyword);
+            check(update.getMessage(), keyword);
         }
     }
 
-
-    void check(Update update, String keyword) {
-        Message message = update.getMessage();
+    void check(Message message, String keyword) {
         GetFile getFile = new GetFile(message.getPhoto().get(2).getFileId());
         try {
             File file = execute(getFile); //tg file obj
@@ -87,6 +89,19 @@ public class AnswerBot extends TelegramLongPollingBot {
             sendMessage(message.getChatId(), chatService.addImgToChat(message.getChatId(), keyword, file));
         } catch (TelegramApiException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void sendingPhoto(long chatId, String messageText) throws TelegramApiException {
+        List<Image> imageList = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId));
+        for(Image image : imageList) {
+            if (messageText.contains(image.getKeyToImg())) {
+                SendPhoto sendPhoto = new SendPhoto();
+                sendPhoto.setChatId(chatId);
+                sendPhoto.setPhoto(new InputFile(new java.io.File(image.getPathToImg())));
+                execute(sendPhoto);
+                break;
+            }
         }
     }
 

@@ -47,7 +47,7 @@ public class ChatService {
 //        log.info("user saved{}", user);
     }
     String addImgToChat(long chatId, String keyword, File file) {
-        Image image = new Image("da", "C:\\gigaPhotos\\photos\\" + file.getFileId() + ".png");
+        Image image = new Image(keyword, "C:\\gigaPhotos\\photos\\" + file.getFileId() + ".png");
         Chat chat = chatRepository.findByChatId(chatId);
         chat.addImageToChat(image);
         chatRepository.save(chat);
