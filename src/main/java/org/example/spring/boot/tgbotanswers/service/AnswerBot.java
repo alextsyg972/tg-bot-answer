@@ -21,10 +21,11 @@ import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 //@Slf4j
 @Component
@@ -64,6 +65,7 @@ public class AnswerBot extends TelegramLongPollingBot {
                     case "/add@kowern_bot" ->
                             sendMessage(chatId, "Ответь на это сообщение словом на которое бот должен реагировать");
                 }
+                return;
             }
             try {
                 sendingPhoto(chatId, messageText);
@@ -77,31 +79,30 @@ public class AnswerBot extends TelegramLongPollingBot {
 
     void addImg(String keyword, Update update) {
         if (keyword != null) {
-            check(update.getMessage(), keyword);
-        }
-    }
-
-    void check(Message message, String keyword) {
-        GetFile getFile = new GetFile(message.getPhoto().get(2).getFileId());
-        try {
-            File file = execute(getFile); //tg file obj
-            downloadFile(file, new java.io.File("C:\\gigaPhotos\\photos\\" + file.getFileId() + ".png"));
-            sendMessage(message.getChatId(), chatService.addImgToChat(message.getChatId(), keyword, file));
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
+            Message message = update.getMessage();
+            GetFile getFile = new GetFile(message.getPhoto().get(2).getFileId());
+            try {
+                File file = execute(getFile); //tg file obj
+                downloadFile(file, new java.io.File("C:\\gigaPhotos\\photos\\" + file.getFileId() + ".png"));
+                sendMessage(message.getChatId(), chatService.addImgToChat(message.getChatId(), keyword, file));
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     private void sendingPhoto(long chatId, String messageText) throws TelegramApiException {
-        List<Image> imageList = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId));
-        for(Image image : imageList) {
-            if (messageText.contains(image.getKeyToImg())) {
-                SendPhoto sendPhoto = new SendPhoto();
-                sendPhoto.setChatId(chatId);
-                sendPhoto.setPhoto(new InputFile(new java.io.File(image.getPathToImg())));
-                execute(sendPhoto);
-                break;
-            }
+        List<Image> list = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId));
+        List<Image> key = list.stream()
+                .filter(x -> messageText.contains(x.getKeyToImg()))
+                .toList();
+        if (!key.isEmpty()) {
+            Random random = new Random();
+            int index = random.nextInt(key.size());
+            SendPhoto sendPhoto = new SendPhoto();
+            sendPhoto.setChatId(chatId);
+            sendPhoto.setPhoto(new InputFile(new java.io.File(key.get(index).getPathToImg())));
+            execute(sendPhoto);
         }
     }
 

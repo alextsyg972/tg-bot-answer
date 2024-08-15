@@ -53,4 +53,14 @@ public class Image {
     public Long getId() {
         return id;
     }
+
+    @Override
+    public String toString() {
+        return "Image{" +
+                "id=" + id +
+                ", keyToImg='" + keyToImg + '\'' +
+                ", pathToImg='" + pathToImg + '\'' +
+                ", chat=" + chat +
+                '}';
+    }
 }
