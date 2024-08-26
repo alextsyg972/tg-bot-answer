@@ -1,10 +1,11 @@
 package org.example.spring.boot.tgbotanswers.service;
 
 import org.example.spring.boot.tgbotanswers.config.BotConfig;
-import org.example.spring.boot.tgbotanswers.model.Chat;
 import org.example.spring.boot.tgbotanswers.model.ChatRepository;
 import org.example.spring.boot.tgbotanswers.model.Image;
 import org.example.spring.boot.tgbotanswers.model.ImageRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -21,19 +22,17 @@ import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-//@Slf4j
 @Component
 public class AnswerBot extends TelegramLongPollingBot {
-    ChatRepository chatRepository;
-    ChatService chatService;
-    final BotConfig botConfig;
-    ImageRepository imageRepository;
+    private static final Logger log = LoggerFactory.getLogger(AnswerBot.class);
+    private ChatRepository chatRepository;
+    private ChatService chatService;
+    private final BotConfig botConfig;
+    private ImageRepository imageRepository;
 
 
     public AnswerBot(@Value("${bot.key}") String botToken, BotConfig botConfig) {
@@ -43,8 +42,6 @@ public class AnswerBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("/start", "welcome"));
         listOfCommands.add(new BotCommand("/register", "register chat"));
         listOfCommands.add(new BotCommand("/add", "add to"));
-        listOfCommands.add(new BotCommand("/today", "Oh"));
-        listOfCommands.add(new BotCommand("/set", "set"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -63,7 +60,7 @@ public class AnswerBot extends TelegramLongPollingBot {
                     case "/start@kowern_bot" -> sendMessage(chatId, chatService.startCommandReceived(chatId));
                     case "/register@kowern_bot" -> sendMessage(chatId, chatService.registerUser(chatId));
                     case "/add@kowern_bot" ->
-                            sendMessage(chatId, "Ответь на это сообщение словом на которое бот должен реагировать");
+                            sendMessage(chatId, "Reply -> add image and message");
                 }
                 return;
             }
@@ -80,13 +77,17 @@ public class AnswerBot extends TelegramLongPollingBot {
     void addImg(String keyword, Update update) {
         if (keyword != null) {
             Message message = update.getMessage();
-            GetFile getFile = new GetFile(message.getPhoto().get(2).getFileId());
             try {
+                GetFile getFile = new GetFile(message.getPhoto().get(2).getFileId());
                 File file = execute(getFile); //tg file obj
-                downloadFile(file, new java.io.File("C:\\gigaPhotos\\photos\\" + file.getFileId() + ".png"));
+                downloadFile(file, new java.io.File("/root/testAppJar/photos/" + file.getFileId() + ".png"));
                 sendMessage(message.getChatId(), chatService.addImgToChat(message.getChatId(), keyword, file));
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
+            } catch (IndexOutOfBoundsException e) {
+                log.error("Ошибка при загрузке файла из чата", e);
+                sendMessage(message.getChatId(), "Неправильный размер изображения");
+            } catch (TelegramApiException x) {
+                log.error(x.toString());
+                sendMessage(message.getChatId(), "Ошибка при обработке фото");
             }
         }
     }
@@ -114,7 +115,7 @@ public class AnswerBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            log.error("Ошибка отправки сообщения",e);
         }
     }
 

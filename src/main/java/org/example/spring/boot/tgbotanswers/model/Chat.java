@@ -3,9 +3,7 @@ package org.example.spring.boot.tgbotanswers.model;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Entity
 public class Chat {
