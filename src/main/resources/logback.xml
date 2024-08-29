@@ -35,10 +35,5 @@
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>
-    <logger name="org.hibernate.SQL" level="trace" additivity="false">
-        <appender-ref ref="FILE-ROLLING" />
-    </logger>
-    <logger name="org.hibernate.type.descriptor.sql" level="trace">
-        <appender-ref ref="FILE-ROLLING" />
-    </logger>
+
 </configuration>
