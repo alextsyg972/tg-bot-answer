@@ -51,22 +51,24 @@ public class AnswerBot extends TelegramLongPollingBot {
             String messageText = update.getMessage().getText();
             if (messageText.contains("@kowern_bot")) {
                 switch (messageText) {
-                    case "/start@kowern_bot" -> chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
+                    case "/start@kowern_bot" ->
+                            chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
                     case "/register@kowern_bot" -> chatService.sendMessage(chatId, chatService.registerUser(chatId));
                     case "/add@kowern_bot" -> chatService.sendMessage(chatId, "Reply -> add image and message");
                 }
                 return;
             }
-            if (LocalDateTime.now().getMinute() - localDateTime.getMinute() > 3) {
-                sendMedia(chatId,messageText);
+            if (LocalDateTime.now().getMinute() - localDateTime.getMinute() >= 3) {
+                System.out.println("inside sendMedia");
+                sendMedia(chatId, messageText);
                 localDateTime = LocalDateTime.now();
             }
         } else if (update.getMessage().isReply() & update.getMessage().hasPhoto()) {
             respond = addImg(update.getMessage().getCaption(), update);
             chatService.sendMessage(chatId, respond);
         } else if (update.getMessage().isReply() & update.getMessage().hasAnimation()) {
-             respond = addGif(update.getMessage().getAnimation(), update.getMessage().getChatId());
-             chatService.sendMessage(chatId, respond);
+            respond = addGif(update.getMessage().getAnimation(), update.getMessage().getChatId());
+            chatService.sendMessage(chatId, respond);
         } else if (update.getMessage().isReply() & update.getMessage().hasText()) {
             mediaService.cringe(chatId, update.getMessage().getText());
             chatService.sendMessage(chatId, "++?");
@@ -74,8 +76,8 @@ public class AnswerBot extends TelegramLongPollingBot {
     }
 
     private <T> void sendMedia(long chatId, String messageText) {
-        try{
-            T t = mediaService.sendingMedia(chatId,messageText);
+        try {
+            T t = mediaService.sendingMedia(chatId, messageText);
             if (t instanceof SendPhoto) execute((SendPhoto) t);
             else if (t instanceof SendAnimation) execute((SendAnimation) t);
         } catch (TelegramApiException e) {
@@ -111,7 +113,7 @@ public class AnswerBot extends TelegramLongPollingBot {
             File file = execute(getFile); //tg file obj
             downloadFile(file, new java.io.File("/root/testAppJar/photos/" + file.getFileId() + ".gif"));
             mediaService.addGifToChat(chatId, chatId.toString(), file);
-            return  "Gif анимация успешно добавлена";
+            return "Gif анимация успешно добавлена";
         } catch (TelegramApiException x) {
             log.error(x.toString());
             return "Ошибка при обработке gif";

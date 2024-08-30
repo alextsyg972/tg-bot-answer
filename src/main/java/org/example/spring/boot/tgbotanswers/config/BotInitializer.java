@@ -1,5 +1,6 @@
 package org.example.spring.boot.tgbotanswers.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.spring.boot.tgbotanswers.service.AnswerBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -11,7 +12,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 
 @Component
-//@Slf4j
+@Slf4j
 public class BotInitializer {
 
     private final AnswerBot bot;
@@ -27,9 +28,7 @@ public class BotInitializer {
         try {
             telegramBotsApi.registerBot(bot);
         } catch (TelegramApiException e) {
-//            log.error("Error occured: {}", e.getMessage());
-//            log.error(Arrays.toString(e.getStackTrace()));
-            e.printStackTrace();
+            log.error("Error occured: {}", e.getMessage());
         }
     }
 }
