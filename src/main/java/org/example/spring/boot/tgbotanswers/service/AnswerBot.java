@@ -10,10 +10,12 @@ import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.games.Animation;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDateTime;
@@ -26,7 +28,11 @@ public class AnswerBot extends TelegramLongPollingBot {
     private ChatService chatService;
     private MediaService mediaService;
     private final BotConfig botConfig;
+    int start = 0;
+    int end = 3;
     LocalDateTime localDateTime = LocalDateTime.now();
+    int index;
+    String keyword;
 
 
     public AnswerBot(@Value("${bot.key}") String botToken, BotConfig botConfig) {
@@ -46,33 +52,77 @@ public class AnswerBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        long chatId = update.getMessage().getChatId();
         String respond;
         if (update.hasMessage() && update.getMessage().hasText() && !update.getMessage().isReply()) {
+            long chatId = update.getMessage().getChatId();
             String messageText = update.getMessage().getText();
             if (messageText.contains("@kowern_bot")) {
                 switch (messageText) {
-                    case "/start@kowern_bot" -> chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
+                    case "/start@kowern_bot" ->
+                            chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
                     case "/register@kowern_bot" -> chatService.sendMessage(chatId, chatService.registerUser(chatId));
                     case "/add@kowern_bot" -> chatService.sendMessage(chatId, "Reply -> add image and message");
-                    case "/delete@kowern_bot" -> chatService.sendMessage(chatId,mediaService.showAllImgInlineKeyboard(chatId));
+                    case "/delete@kowern_bot" -> {
+                        chatService.sendMessage(chatId, mediaService.pagingImgKeyWords(chatId, start, end));
+                        start = 0;
+                        end = 3;
+                        index = 0;
+                    }
                 }
                 return;
             }
             if (LocalDateTime.now().getMinute() - localDateTime.getMinute() >= 3) {
-                System.out.println("inside sendMedia");
                 sendMedia(chatId, messageText);
                 localDateTime = LocalDateTime.now();
             }
+
+        } else if (update.hasCallbackQuery()) {
+            String callBackData = update.getCallbackQuery().getData();
+            Integer message_id = update.getCallbackQuery().getMessage().getMessageId();
+            long chatIdCallback = update.getCallbackQuery().getMessage().getChatId();
+            if (callBackData.equals("\u2B05")) {
+                try {
+                    InlineKeyboardMarkup inlineKeyboardMarkup = mediaService.pagingImgKeyWords(chatIdCallback, start - 3, end - 3);
+                    if (inlineKeyboardMarkup != null) {
+                        execute(EditMessageText.builder().chatId(chatIdCallback).messageId(message_id).text("Выберите необходимое слово").replyMarkup(inlineKeyboardMarkup).build());
+                        start = start - 3;
+                        end = end - 3;
+                    }
+                } catch (TelegramApiException e) {
+                    log.error("RunTimeEx when send edited msg", e);
+                }
+            } else if (callBackData.equals("\u27A1")) {
+                try {
+                    InlineKeyboardMarkup inlineKeyboardMarkup = mediaService.pagingImgKeyWords(chatIdCallback, start + 3, end + 3);
+                    if (inlineKeyboardMarkup != null) {
+                        execute(EditMessageText.builder().chatId(chatIdCallback).messageId(message_id).text("Выберите необходимое слово").replyMarkup(mediaService.pagingImgKeyWords(chatIdCallback, start + 3, end + 3)).build());
+                        start = start + 3;
+                        end = end + 3;
+                    }
+                } catch (TelegramApiException e) {
+                    log.error("RunTimeEx when send edited msg", e);
+                }
+            } else {
+                if (callBackData.equals("\u2B05show")) {
+                    index--;
+                    sendMedia(chatIdCallback, keyword, mediaService.showImgCallback(chatIdCallback,index, keyword), index);
+                } else if (callBackData.equals("\u27A1show")) {
+                    index = index + 1;
+                    sendMedia(chatIdCallback, keyword, mediaService.showImgCallback(chatIdCallback,index, keyword), index);
+                } else {
+                    sendMedia(chatIdCallback, callBackData, mediaService.showImgCallback(chatIdCallback,index, callBackData), index);
+                    keyword = callBackData;
+                }
+            }
         } else if (update.getMessage().isReply() & update.getMessage().hasPhoto()) {
             respond = addImg(update.getMessage().getCaption(), update);
-            chatService.sendMessage(chatId, respond);
+            chatService.sendMessage(update.getMessage().getChatId(), respond);
         } else if (update.getMessage().isReply() & update.getMessage().hasAnimation()) {
             respond = addGif(update.getMessage().getAnimation(), update.getMessage().getChatId());
-            chatService.sendMessage(chatId, respond);
+            chatService.sendMessage(update.getMessage().getChatId(), respond);
         } else if (update.getMessage().isReply() & update.getMessage().hasText()) {
-            mediaService.cringe(chatId, update.getMessage().getText());
-            chatService.sendMessage(chatId, "++?");
+            mediaService.cringe(update.getMessage().getChatId(), update.getMessage().getText());
+            chatService.sendMessage(update.getMessage().getChatId(), "Готово");
         }
     }
 
@@ -85,6 +135,16 @@ public class AnswerBot extends TelegramLongPollingBot {
             log.error("Error sending Media", e);
         }
     }
+    private <T> void sendMedia(long chatId, String messageText, InlineKeyboardMarkup inlineKeyboardMarkup, int index) {
+        try {
+            T t = mediaService.sendingMedia(chatId, messageText, inlineKeyboardMarkup, index);
+            if (t instanceof SendPhoto) execute((SendPhoto) t);
+            else if (t instanceof SendAnimation) execute((SendAnimation) t);
+        } catch (TelegramApiException e) {
+            log.error("Error sending Media", e);
+        }
+    }
+
 
     //Png
     private String addImg(String keyword, Update update) {
