@@ -9,21 +9,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Service
 @Slf4j
 public class ChatService {
-    private final ImageRepository imageRepository;
     private ChatRepository chatRepository;
     private AnswerBot answerBot;
 
 
     @Autowired
     @Lazy
-    public ChatService(ChatRepository chatRepository, ImageRepository imageRepository, AnswerBot answerBot) {
+    public ChatService(ChatRepository chatRepository, AnswerBot answerBot) {
         this.chatRepository = chatRepository;
-        this.imageRepository = imageRepository;
         this.answerBot = answerBot;
     }
 
@@ -48,10 +47,26 @@ public class ChatService {
         return "Зарегистрировал";
     }
 
-     void sendMessage(long chatId, String textToSend) {
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(textToSend);
+    void sendMessage(long chatId, String textToSend) {
+        SendMessage message = SendMessage
+                .builder()
+                .chatId(chatId)
+                .text(textToSend)
+                .build();
+        try {
+            answerBot.execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Ошибка отправки сообщения", e);
+        }
+    }
+
+    void sendMessage(long chatId, InlineKeyboardMarkup inlineKeyboardMarkup) {
+        SendMessage message = SendMessage
+                .builder()
+                .chatId(chatId)
+                .text("Выберите необходимое слово")
+                .replyMarkup(inlineKeyboardMarkup)
+                .build();
         try {
             answerBot.execute(message);
         } catch (TelegramApiException e) {

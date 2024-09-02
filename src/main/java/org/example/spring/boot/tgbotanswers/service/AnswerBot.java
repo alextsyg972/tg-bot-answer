@@ -36,6 +36,7 @@ public class AnswerBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("/start", "welcome"));
         listOfCommands.add(new BotCommand("/register", "register chat"));
         listOfCommands.add(new BotCommand("/add", "add to"));
+        listOfCommands.add(new BotCommand("/delete", "delete img"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -51,10 +52,10 @@ public class AnswerBot extends TelegramLongPollingBot {
             String messageText = update.getMessage().getText();
             if (messageText.contains("@kowern_bot")) {
                 switch (messageText) {
-                    case "/start@kowern_bot" ->
-                            chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
+                    case "/start@kowern_bot" -> chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
                     case "/register@kowern_bot" -> chatService.sendMessage(chatId, chatService.registerUser(chatId));
                     case "/add@kowern_bot" -> chatService.sendMessage(chatId, "Reply -> add image and message");
+                    case "/delete@kowern_bot" -> chatService.sendMessage(chatId,mediaService.showAllImgInlineKeyboard(chatId));
                 }
                 return;
             }
