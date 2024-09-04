@@ -7,6 +7,7 @@ import org.example.spring.boot.tgbotanswers.model.Image;
 import org.example.spring.boot.tgbotanswers.model.ImageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.File;
@@ -15,6 +16,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -152,13 +156,13 @@ public class MediaService {
     }
 
     InlineKeyboardMarkup pagingImgKeyWords(long chatId, int start, int end) {
-        List<Image> imageList = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId));
+        List<String> imageList = imageRepository.getKeyToImgByChat(chatRepository.findByChatId(chatId).getId());
         List<InlineKeyboardButton> keyboardButtonsRow = new ArrayList<>();
         if (imageList.size() >= start && start >= 0) {
             for (int i = start; i < imageList.size(); i++) {
                 if (i >= end) break;
                 InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-                inlineKeyboardButton.setText(imageList.get(i).getKeyToImg());
+                inlineKeyboardButton.setText(imageList.get(i));
                 inlineKeyboardButton.setCallbackData(inlineKeyboardButton.getText());
                 keyboardButtonsRow.add(inlineKeyboardButton);
             }
@@ -206,6 +210,18 @@ public class MediaService {
         inlineKeyboardMarkup.setKeyboard(rowList);
         return inlineKeyboardMarkup;
     }
+    @Transactional
+    void deleteImgFromChat(long chatId, int index) {
+        Image image = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId)).get(index);
+        try {
+            chatRepository.findByChatId(chatId).removeImage(image);
+            imageRepository.delete(image);
+            Files.delete(Path.of(image.getPathToImg()));
+            log.info("deleted img from chat{}", chatId);
+        } catch (IOException e) {
+            log.error("error deleting file {}", e.getMessage());
+        }
+    }
 
     void addImgToChat(long chatId, String keyword, File file) {
         Image image = new Image(keyword, "/root/testAppJar/photos/" + file.getFileId() + ".png");
@@ -223,10 +239,13 @@ public class MediaService {
         log.info("added new gif to chat{}", chatId);
     }
 
-    void cringe(Long chatId, String keyword) {
+    void updateKeyToImg(Long chatId, String keyword) {
         Chat chat = chatRepository.findByChatId(chatId);
         List<Image> image = imageRepository.getImagesByChatAndKeyToImg(chat, chatId.toString());
-        image.get(0).setKeyToImg(keyword);
-        imageRepository.save(image.get(0));
+        if (!image.isEmpty()) {
+            image.get(0).setKeyToImg(keyword);
+            imageRepository.save(image.get(0));
+            log.info("update img entity {}", image.get(0));
+        } else log.error("error update keyword in img entity chatid= {} keyword= {} ",chatId, keyword );
     }
 }

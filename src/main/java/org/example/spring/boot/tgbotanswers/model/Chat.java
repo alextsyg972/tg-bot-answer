@@ -16,12 +16,24 @@ public class Chat {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "chat", fetch = FetchType.EAGER)
     private List<Image> images;
 
+
+
+    public Chat(Long id, Long chatId) {
+        this.id = id;
+        this.chatId = chatId;
+    }
+
     public void addImageToChat(Image image) {
         if (images == null) {
             images = new ArrayList<>();
         }
         images.add(image);
         image.setChat(this);
+    }
+
+    public void removeImage(Image image) {
+        images.remove(image);
+        image.setChat(null);
     }
 
     public Chat() {

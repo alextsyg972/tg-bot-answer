@@ -61,7 +61,7 @@ public class AnswerBot extends TelegramLongPollingBot {
                     case "/start@kowern_bot" ->
                             chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
                     case "/register@kowern_bot" -> chatService.sendMessage(chatId, chatService.registerUser(chatId));
-                    case "/add@kowern_bot" -> chatService.sendMessage(chatId, "Reply -> add image and message");
+                    case "/add@kowern_bot" -> chatService.sendMessage(chatId, "Reply -> Добавить изображение с сообщением|Gif");
                     case "/delete@kowern_bot" -> {
                         chatService.sendMessage(chatId, mediaService.pagingImgKeyWords(chatId, start, end));
                         start = 0;
@@ -105,12 +105,15 @@ public class AnswerBot extends TelegramLongPollingBot {
             } else {
                 if (callBackData.equals("\u2B05show")) {
                     index--;
-                    sendMedia(chatIdCallback, keyword, mediaService.showImgCallback(chatIdCallback,index, keyword), index);
+                    sendMedia(chatIdCallback, keyword, mediaService.showImgCallback(chatIdCallback, index, keyword), index);
                 } else if (callBackData.equals("\u27A1show")) {
                     index = index + 1;
-                    sendMedia(chatIdCallback, keyword, mediaService.showImgCallback(chatIdCallback,index, keyword), index);
+                    sendMedia(chatIdCallback, keyword, mediaService.showImgCallback(chatIdCallback, index, keyword), index);
+                } else if (callBackData.equals("Удалить")) {
+                    mediaService.deleteImgFromChat(chatIdCallback, index);
+                    chatService.sendMessage(chatIdCallback, "Успешно удалено");
                 } else {
-                    sendMedia(chatIdCallback, callBackData, mediaService.showImgCallback(chatIdCallback,index, callBackData), index);
+                    sendMedia(chatIdCallback, callBackData, mediaService.showImgCallback(chatIdCallback, index, callBackData), index);
                     keyword = callBackData;
                 }
             }
@@ -121,7 +124,7 @@ public class AnswerBot extends TelegramLongPollingBot {
             respond = addGif(update.getMessage().getAnimation(), update.getMessage().getChatId());
             chatService.sendMessage(update.getMessage().getChatId(), respond);
         } else if (update.getMessage().isReply() & update.getMessage().hasText()) {
-            mediaService.cringe(update.getMessage().getChatId(), update.getMessage().getText());
+            mediaService.updateKeyToImg(update.getMessage().getChatId(), update.getMessage().getText());
             chatService.sendMessage(update.getMessage().getChatId(), "Готово");
         }
     }
@@ -135,6 +138,7 @@ public class AnswerBot extends TelegramLongPollingBot {
             log.error("Error sending Media", e);
         }
     }
+
     private <T> void sendMedia(long chatId, String messageText, InlineKeyboardMarkup inlineKeyboardMarkup, int index) {
         try {
             T t = mediaService.sendingMedia(chatId, messageText, inlineKeyboardMarkup, index);

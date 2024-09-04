@@ -3,7 +3,6 @@ package org.example.spring.boot.tgbotanswers.service;
 import lombok.extern.slf4j.Slf4j;
 import org.example.spring.boot.tgbotanswers.model.Chat;
 import org.example.spring.boot.tgbotanswers.model.ChatRepository;
-import org.example.spring.boot.tgbotanswers.model.ImageRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -34,6 +33,7 @@ public class ChatService {
         log.info("start command received{}", chatId);
         return answer;
     }
+
 
     String registerUser(long chatId) {
         if (chatRepository.findByChatId(chatId) != null) {
