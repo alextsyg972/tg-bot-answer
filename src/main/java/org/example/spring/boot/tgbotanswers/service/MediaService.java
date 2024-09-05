@@ -36,7 +36,7 @@ public class MediaService {
         this.chatRepository = chatRepository;
     }
 
-    <T> T sendingMedia(long chatId, String messageText) throws TelegramApiException {
+    public <T> T sendingMedia(long chatId, String messageText) throws TelegramApiException {
         List<Image> listImages = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId));
         List<Image> key = listImages.stream()
                 .filter(x -> messageText.equals(x.getKeyToImg()))
@@ -60,7 +60,7 @@ public class MediaService {
         return null;
     }
 
-    <T> T sendingMedia(long chatId, String messageText, InlineKeyboardMarkup inlineKeyboardMarkup, int index) throws TelegramApiException {
+    public <T> T sendingMedia(long chatId, String messageText, InlineKeyboardMarkup inlineKeyboardMarkup, int index) {
         List<Image> listImages = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId));
         List<Image> key = listImages.stream()
                 .filter(x -> messageText.equals(x.getKeyToImg()))
@@ -85,7 +85,7 @@ public class MediaService {
         return null;
     }
 
-    InlineKeyboardMarkup showImgCallback(long chatId,int index, String key) {
+    public InlineKeyboardMarkup showImgCallback(long chatId,int index, String key) {
         List<Image> imageList = imageRepository.getImagesByChatAndKeyToImg(chatRepository.findByChatId(chatId), key);
         List<InlineKeyboardButton> keyboardButtonsRow = new ArrayList<>();
         if (index <= 0) {
@@ -155,7 +155,7 @@ public class MediaService {
         return inlineKeyboardMarkup;
     }
 
-    InlineKeyboardMarkup pagingImgKeyWords(long chatId, int start, int end) {
+    public InlineKeyboardMarkup pagingImgKeyWords(long chatId, int start, int end) {
         List<String> imageList = imageRepository.getKeyToImgByChat(chatRepository.findByChatId(chatId).getId());
         List<InlineKeyboardButton> keyboardButtonsRow = new ArrayList<>();
         if (imageList.size() >= start && start >= 0) {
@@ -171,7 +171,7 @@ public class MediaService {
         if (start < 0) {
             InlineKeyboardButton nextButton = new InlineKeyboardButton();
             nextButton.setText("\u27A1");
-            nextButton.setCallbackData(nextButton.getText());
+            nextButton.setCallbackData(nextButton.getText()+"main");
             pagButtons.add(nextButton);
             List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
             rowList.add(keyboardButtonsRow);
@@ -182,7 +182,7 @@ public class MediaService {
         } else if (end > imageList.size()) {
             InlineKeyboardButton prevButton = new InlineKeyboardButton();
             prevButton.setText("\u2B05");
-            prevButton.setCallbackData(prevButton.getText());
+            prevButton.setCallbackData(prevButton.getText()+"main");
             pagButtons.add(prevButton);
             List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
             rowList.add(keyboardButtonsRow);
@@ -193,11 +193,11 @@ public class MediaService {
         }
         InlineKeyboardButton prevButton = new InlineKeyboardButton();
         prevButton.setText("\u2B05");
-        prevButton.setCallbackData(prevButton.getText());
+        prevButton.setCallbackData(prevButton.getText()+"main");
 
         InlineKeyboardButton nextButton = new InlineKeyboardButton();
         nextButton.setText("\u27A1");
-        nextButton.setCallbackData(nextButton.getText());
+        nextButton.setCallbackData(nextButton.getText()+"main");
 
         pagButtons.add(prevButton);
         pagButtons.add(nextButton);
@@ -211,7 +211,7 @@ public class MediaService {
         return inlineKeyboardMarkup;
     }
     @Transactional
-    void deleteImgFromChat(long chatId, int index) {
+    public void deleteImgFromChat(long chatId, int index) {
         Image image = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId)).get(index);
         try {
             chatRepository.findByChatId(chatId).removeImage(image);

@@ -47,7 +47,7 @@ public class ChatService {
         return "Зарегистрировал";
     }
 
-    void sendMessage(long chatId, String textToSend) {
+    public void sendMessage(long chatId, String textToSend) {
         SendMessage message = SendMessage
                 .builder()
                 .chatId(chatId)
@@ -60,7 +60,7 @@ public class ChatService {
         }
     }
 
-    void sendMessage(long chatId, InlineKeyboardMarkup inlineKeyboardMarkup) {
+    public void sendMessage(long chatId, InlineKeyboardMarkup inlineKeyboardMarkup) {
         SendMessage message = SendMessage
                 .builder()
                 .chatId(chatId)

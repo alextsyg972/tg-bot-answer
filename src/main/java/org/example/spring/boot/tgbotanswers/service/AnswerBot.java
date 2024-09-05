@@ -2,6 +2,7 @@ package org.example.spring.boot.tgbotanswers.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.spring.boot.tgbotanswers.config.BotConfig;
+import org.example.spring.boot.tgbotanswers.handler.CallbackHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -10,12 +11,10 @@ import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.games.Animation;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDateTime;
@@ -28,12 +27,8 @@ public class AnswerBot extends TelegramLongPollingBot {
     private ChatService chatService;
     private MediaService mediaService;
     private final BotConfig botConfig;
-    int start = 0;
-    int end = 3;
     LocalDateTime localDateTime = LocalDateTime.now();
-    int index;
-    String keyword;
-
+    private CallbackHandler callbackHandler;
 
     public AnswerBot(@Value("${bot.key}") String botToken, BotConfig botConfig) {
         super(botToken);
@@ -53,79 +48,47 @@ public class AnswerBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         String respond;
-        if (update.hasMessage() && update.getMessage().hasText() && !update.getMessage().isReply()) {
+        if (update.hasMessage()) {
             long chatId = update.getMessage().getChatId();
-            String messageText = update.getMessage().getText();
-            if (messageText.contains("@kowern_bot")) {
+            if (update.getMessage().hasText() && !update.getMessage().isReply()) {
+                String messageText = update.getMessage().getText();
                 switch (messageText) {
                     case "/start@kowern_bot" ->
                             chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
                     case "/register@kowern_bot" -> chatService.sendMessage(chatId, chatService.registerUser(chatId));
-                    case "/add@kowern_bot" -> chatService.sendMessage(chatId, "Reply -> Добавить изображение с сообщением|Gif");
+                    case "/add@kowern_bot" ->
+                            chatService.sendMessage(chatId, "Reply -> Добавить изображение с сообщением|Gif");
                     case "/delete@kowern_bot" -> {
-                        chatService.sendMessage(chatId, mediaService.pagingImgKeyWords(chatId, start, end));
-                        start = 0;
-                        end = 3;
-                        index = 0;
+                        chatService.sendMessage(chatId, mediaService.pagingImgKeyWords(chatId, 0, 3));
+                        callbackHandler.deleteCommandInit();
                     }
+                }
+                if (LocalDateTime.now().getMinute() - localDateTime.getMinute() >= 1) {
+                    sendMedia(chatId, messageText);
+                    localDateTime = LocalDateTime.now();
                 }
                 return;
+            } else if (update.getMessage().isReply() & update.getMessage().hasPhoto()) {
+                respond = addImg(update.getMessage().getCaption(), update);
+                chatService.sendMessage(update.getMessage().getChatId(), respond);
+            } else if (update.getMessage().isReply() & update.getMessage().hasAnimation()) {
+                respond = addGif(update.getMessage().getAnimation(), update.getMessage().getChatId());
+                chatService.sendMessage(update.getMessage().getChatId(), respond);
+            } else if (update.getMessage().isReply() & update.getMessage().hasText()) {
+                mediaService.updateKeyToImg(update.getMessage().getChatId(), update.getMessage().getText());
+                chatService.sendMessage(update.getMessage().getChatId(), "Готово");
             }
-            if (LocalDateTime.now().getMinute() - localDateTime.getMinute() >= 3) {
-                sendMedia(chatId, messageText);
-                localDateTime = LocalDateTime.now();
-            }
-
-        } else if (update.hasCallbackQuery()) {
-            String callBackData = update.getCallbackQuery().getData();
-            Integer message_id = update.getCallbackQuery().getMessage().getMessageId();
-            long chatIdCallback = update.getCallbackQuery().getMessage().getChatId();
-            if (callBackData.equals("\u2B05")) {
+        }
+        if (update.hasCallbackQuery()) {
+            if (update.getCallbackQuery().getData().contains("main")) {
                 try {
-                    InlineKeyboardMarkup inlineKeyboardMarkup = mediaService.pagingImgKeyWords(chatIdCallback, start - 3, end - 3);
-                    if (inlineKeyboardMarkup != null) {
-                        execute(EditMessageText.builder().chatId(chatIdCallback).messageId(message_id).text("Выберите необходимое слово").replyMarkup(inlineKeyboardMarkup).build());
-                        start = start - 3;
-                        end = end - 3;
-                    }
+                    execute(callbackHandler.deleteCallbackHandler(update));
                 } catch (TelegramApiException e) {
-                    log.error("RunTimeEx when send edited msg", e);
-                }
-            } else if (callBackData.equals("\u27A1")) {
-                try {
-                    InlineKeyboardMarkup inlineKeyboardMarkup = mediaService.pagingImgKeyWords(chatIdCallback, start + 3, end + 3);
-                    if (inlineKeyboardMarkup != null) {
-                        execute(EditMessageText.builder().chatId(chatIdCallback).messageId(message_id).text("Выберите необходимое слово").replyMarkup(mediaService.pagingImgKeyWords(chatIdCallback, start + 3, end + 3)).build());
-                        start = start + 3;
-                        end = end + 3;
-                    }
-                } catch (TelegramApiException e) {
-                    log.error("RunTimeEx when send edited msg", e);
+                    log.error("Error execute deleteCallbackHandler {}", e.getMessage());
                 }
             } else {
-                if (callBackData.equals("\u2B05show")) {
-                    index--;
-                    sendMedia(chatIdCallback, keyword, mediaService.showImgCallback(chatIdCallback, index, keyword), index);
-                } else if (callBackData.equals("\u27A1show")) {
-                    index = index + 1;
-                    sendMedia(chatIdCallback, keyword, mediaService.showImgCallback(chatIdCallback, index, keyword), index);
-                } else if (callBackData.equals("Удалить")) {
-                    mediaService.deleteImgFromChat(chatIdCallback, index);
-                    chatService.sendMessage(chatIdCallback, "Успешно удалено");
-                } else {
-                    sendMedia(chatIdCallback, callBackData, mediaService.showImgCallback(chatIdCallback, index, callBackData), index);
-                    keyword = callBackData;
-                }
+                sendMedia(update);
             }
-        } else if (update.getMessage().isReply() & update.getMessage().hasPhoto()) {
-            respond = addImg(update.getMessage().getCaption(), update);
-            chatService.sendMessage(update.getMessage().getChatId(), respond);
-        } else if (update.getMessage().isReply() & update.getMessage().hasAnimation()) {
-            respond = addGif(update.getMessage().getAnimation(), update.getMessage().getChatId());
-            chatService.sendMessage(update.getMessage().getChatId(), respond);
-        } else if (update.getMessage().isReply() & update.getMessage().hasText()) {
-            mediaService.updateKeyToImg(update.getMessage().getChatId(), update.getMessage().getText());
-            chatService.sendMessage(update.getMessage().getChatId(), "Готово");
         }
     }
 
@@ -139,13 +102,15 @@ public class AnswerBot extends TelegramLongPollingBot {
         }
     }
 
-    private <T> void sendMedia(long chatId, String messageText, InlineKeyboardMarkup inlineKeyboardMarkup, int index) {
+    private <T> void sendMedia(Update update) {
         try {
-            T t = mediaService.sendingMedia(chatId, messageText, inlineKeyboardMarkup, index);
+            T t = callbackHandler.deleteCallbackShow(update);
             if (t instanceof SendPhoto) execute((SendPhoto) t);
             else if (t instanceof SendAnimation) execute((SendAnimation) t);
         } catch (TelegramApiException e) {
-            log.error("Error sending Media", e);
+            log.error("Error sending Media = {}", e.getMessage());
+        } catch (NullPointerException x) {
+            log.error("callbackHandler.deleteCallBackShow returning null = {}", x.getMessage());
         }
     }
 
@@ -189,6 +154,11 @@ public class AnswerBot extends TelegramLongPollingBot {
     @Override
     public String getBotUsername() {
         return botConfig.getBotName();
+    }
+
+    @Autowired
+    public void setCallbackHandler(CallbackHandler callbackHandler) {
+        this.callbackHandler = callbackHandler;
     }
 
     @Autowired
