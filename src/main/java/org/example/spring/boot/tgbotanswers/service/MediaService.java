@@ -39,8 +39,9 @@ public class MediaService {
     public <T> T sendingMedia(long chatId, String messageText) throws TelegramApiException {
         List<Image> listImages = imageRepository.getImagesByChat(chatRepository.findByChatId(chatId));
         List<Image> key = listImages.stream()
-                .filter(x -> messageText.equals(x.getKeyToImg()))
+                .filter(x -> messageText.contains(x.getKeyToImg()))
                 .toList();
+        System.out.println(key);
         if (!key.isEmpty()) {
             int index = new Random().nextInt(key.size());
             if (key.get(index).getPathToImg().contains(".png")) {

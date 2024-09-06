@@ -47,17 +47,18 @@ public class ChatService {
         return "Зарегистрировал";
     }
 
-    public void sendMessage(long chatId, String textToSend) {
+    public Integer sendMessage(long chatId, String textToSend) {
         SendMessage message = SendMessage
                 .builder()
                 .chatId(chatId)
                 .text(textToSend)
                 .build();
         try {
-            answerBot.execute(message);
+             return answerBot.execute(message).getMessageId();
         } catch (TelegramApiException e) {
             log.error("Ошибка отправки сообщения", e);
         }
+        return null;
     }
 
     public void sendMessage(long chatId, InlineKeyboardMarkup inlineKeyboardMarkup) {

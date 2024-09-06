@@ -29,6 +29,8 @@ public class AnswerBot extends TelegramLongPollingBot {
     private final BotConfig botConfig;
     LocalDateTime localDateTime = LocalDateTime.now();
     private CallbackHandler callbackHandler;
+    private String respond;
+    private Integer messageId;
 
     public AnswerBot(@Value("${bot.key}") String botToken, BotConfig botConfig) {
         super(botToken);
@@ -47,37 +49,43 @@ public class AnswerBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        String respond;
         if (update.hasMessage()) {
             long chatId = update.getMessage().getChatId();
-            if (update.getMessage().hasText() && !update.getMessage().isReply()) {
+            if (update.getMessage().hasText()) {
                 String messageText = update.getMessage().getText();
-                switch (messageText) {
-                    case "/start@kowern_bot" ->
-                            chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
-                    case "/register@kowern_bot" -> chatService.sendMessage(chatId, chatService.registerUser(chatId));
-                    case "/add@kowern_bot" ->
-                            chatService.sendMessage(chatId, "Reply -> Добавить изображение с сообщением|Gif");
-                    case "/delete@kowern_bot" -> {
-                        chatService.sendMessage(chatId, mediaService.pagingImgKeyWords(chatId, 0, 3));
-                        callbackHandler.deleteCommandInit();
+                if (!update.getMessage().isReply()) {
+                    switch (messageText) {
+                        case "/start@kowern_bot" ->
+                                chatService.sendMessage(chatId, chatService.startCommandReceived(chatId));
+                        case "/register@kowern_bot" ->
+                                chatService.sendMessage(chatId, chatService.registerUser(chatId));
+                        case "/add@kowern_bot" ->
+                                messageId = chatService.sendMessage(chatId, "Reply -> Добавить изображение с сообщением|Gif");
+                        case "/delete@kowern_bot" -> {
+                            chatService.sendMessage(chatId, mediaService.pagingImgKeyWords(chatId, 0, 3));
+                            callbackHandler.deleteCommandInit();
+                        }
                     }
                 }
                 if (LocalDateTime.now().getMinute() - localDateTime.getMinute() >= 1) {
-                    sendMedia(chatId, messageText);
-                    localDateTime = LocalDateTime.now();
+                System.out.println("im here");
+                sendMedia(chatId, messageText);
+                localDateTime = LocalDateTime.now();
                 }
-                return;
-            } else if (update.getMessage().isReply() & update.getMessage().hasPhoto()) {
-                respond = addImg(update.getMessage().getCaption(), update);
-                chatService.sendMessage(update.getMessage().getChatId(), respond);
-            } else if (update.getMessage().isReply() & update.getMessage().hasAnimation()) {
-                respond = addGif(update.getMessage().getAnimation(), update.getMessage().getChatId());
-                chatService.sendMessage(update.getMessage().getChatId(), respond);
-            } else if (update.getMessage().isReply() & update.getMessage().hasText()) {
-                mediaService.updateKeyToImg(update.getMessage().getChatId(), update.getMessage().getText());
-                chatService.sendMessage(update.getMessage().getChatId(), "Готово");
             }
+            if (update.getMessage().isReply() && update.getMessage().getReplyToMessage().getMessageId().equals(messageId)) {
+                if (update.getMessage().hasPhoto()) {
+                    respond = addImg(update.getMessage().getCaption(), update);
+                    chatService.sendMessage(update.getMessage().getChatId(), respond);
+                } else if (update.getMessage().hasAnimation()) {
+                    respond = addGif(update.getMessage().getAnimation(), update.getMessage().getChatId());
+                    messageId = chatService.sendMessage(update.getMessage().getChatId(), respond);
+                } else if (update.getMessage().hasText()) {
+                    mediaService.updateKeyToImg(update.getMessage().getChatId(), update.getMessage().getText());
+                    chatService.sendMessage(update.getMessage().getChatId(), "Текст закреплен за Gif");
+                }
+            }
+
         }
         if (update.hasCallbackQuery()) {
             if (update.getCallbackQuery().getData().contains("main")) {
@@ -93,6 +101,7 @@ public class AnswerBot extends TelegramLongPollingBot {
     }
 
     private <T> void sendMedia(long chatId, String messageText) {
+        System.out.println("inside sendMedia");
         try {
             T t = mediaService.sendingMedia(chatId, messageText);
             if (t instanceof SendPhoto) execute((SendPhoto) t);
@@ -143,7 +152,7 @@ public class AnswerBot extends TelegramLongPollingBot {
             File file = execute(getFile); //tg file obj
             downloadFile(file, new java.io.File("/root/testAppJar/photos/" + file.getFileId() + ".gif"));
             mediaService.addGifToChat(chatId, chatId.toString(), file);
-            return "Gif анимация успешно добавлена";
+            return "Gif анимация успешно добавлена, ответь на это сообщение чтобы указать на какое слово бот будет реагировать";
         } catch (TelegramApiException x) {
             log.error(x.toString());
             return "Ошибка при обработке gif";
