@@ -1,10 +1,10 @@
 A simple tg bot that responds to user messages, sends a GIF or Image as a response.
 
 The application uses:
-telegrambotsApi
-Spring boot
-Spring data JPA
-MySql
+*telegrambotsApi
+*Spring boot
+*Spring data JPA
+*MySql
 
 The following commands are used in the bot:
 /start - basic information about the bot
